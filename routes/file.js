@@ -154,13 +154,8 @@ router.post("/", (req, res) => {
         let storageSource = "local";
         
         if (isSupabaseConfigured()) {
-          try {
-            await uploadToSupabase(f.path, f.filename);
-            storageSource = "supabase";
-          } catch (storageErr) {
-            console.error("Supabase upload failed, falling back to local:", storageErr.message);
-            // Fallback to local if Supabase fails (though on Vercel this will be temporary)
-          }
+          await uploadToSupabase(f.path, f.filename);
+          storageSource = "supabase";
         }
 
         const file = new File({
