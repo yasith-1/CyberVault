@@ -15,6 +15,28 @@
 
 ---
 
+## 🚀 Why CyberVault?
+
+In an era of bulky cloud storage and complex sign-up processes, sharing a file quickly and securely should be simpler. Common file transfer methods often suffer from:
+- **Privacy Concerns**: Files remaining on public servers indefinitely without clear expiration.
+- **Complexity**: Forced account creation for simple one-off transfers.
+- **Manual Overhead**: Having to manually copy links and draft emails to multiple recipients.
+
+**CyberVault solves this** by providing a "no-friction," temporary payload exchange system. It acts as a digital courier that handles the upload, generates a secure bridge (UUID link), and delivers it directly to the recipient's inbox—all in one coordinated execution.
+
+---
+
+## 🌟 The CyberVault Speciality
+
+What sets CyberVault apart from generic file-sharing clones?
+
+- **Batch Transmission Protocol**: Move beyond single-file uploads. CyberVault supports bundling up to 10 files into a single "Payload Bundle." Recipients get one clean repository-style link to access the entire set.
+- **Hacker-Aesthetic UX**: Designed with a high-contrast, blue-themed Terminal UI, CyberVault offers an immersive "data-broker" experience that makes file transfers feel like secure mission deployments.
+- **Smart Environment Awareness**: The system features built-in infrastructure logic that automatically detects its host address. Whether you're running on `localhost` or a production domain like Vercel, your shared links stay 100% accurate.
+- **Integrated Dispatch**: Features a refined SMTP pipeline (SMTP/Brevo) that automates the delivery process, moving your data from your desktop to their eyes without additional manual steps.
+
+---
+
 ## ✨ Key Features
 
 - 💎 **Secure File Uploads** — Robust handling of multipart file uploads directly to your server using **Multer**.
