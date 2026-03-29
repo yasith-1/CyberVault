@@ -19,20 +19,21 @@ app.get("/", (req, res) => {
   });
 });
 
-async function startServer() {
-  try {
-    await connectDB();
-    console.log("Database connected");
-    app.use("/api/files", files);
-    app.use("/files", show);
+// Routes
+app.use("/api/files", files);
+app.use("/files", show);
 
-    app.listen(PORT, () => {
-      console.log(`Server listening at :${PORT}`);
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error.message);
-    process.exit(1);
-  }
+// Database connection
+connectDB()
+  .then(() => console.log("Database connected"))
+  .catch((err) => console.error("Database connection failed:", err.message));
+
+// Vercel compatibility: Only listen if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server listening at :${PORT}`);
+  });
 }
 
-startServer();
+// Export the app for Vercel
+module.exports = app;

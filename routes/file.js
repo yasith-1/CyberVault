@@ -6,7 +6,8 @@ const File = require("../models/file");
 const { v4: uuid4 } = require("uuid");
 const { isEmailConfigured, sendShareEmail } = require("../services/emailService");
 
-const uploadDir = path.join(process.cwd(), "uploads");
+const isVercel = !!process.env.VERCEL;
+const uploadDir = isVercel ? '/tmp/uploads' : path.join(process.cwd(), "uploads");
 const fileSizeLimitBytes = 1000 * 1000 * 100;
 
 const storage = multer.diskStorage({
