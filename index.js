@@ -42,7 +42,14 @@ app.use(async (req, res, next) => {
 });
 
 // Basic route for initial health check
-app.get("/health", (req, res) => res.json({ status: "ok", database: connected ? "connected" : "disconnected" }));
+app.get("/health", (req, res) => {
+  const dbName = connected ? mongoose.connection.name : "N/A";
+  res.json({ 
+    status: "ok", 
+    database: connected ? "connected" : "disconnected",
+    dbName: dbName
+  });
+});
 
 // Routes
 app.use("/api/files", files);
