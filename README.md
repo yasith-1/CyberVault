@@ -103,6 +103,6 @@ npm run server
 
 ---
 
-**Developed with Passion by [Bipanshu Kr](https://github.com/bipanshukr)**  
+**Developed with Passion by [Yashith Prabhashwara](https://github.com/bipanshukr)**  
 *Elevating secure file sharing standards one byte at a time.*
 

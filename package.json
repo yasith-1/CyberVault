@@ -10,7 +10,7 @@
     "dev": "nodemon index.js"
   },
   "keywords": [],
-  "author": "Bipanshu Kr",
+  "author": "Yashith Prabhashwara",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
