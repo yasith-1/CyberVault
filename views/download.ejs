@@ -484,7 +484,6 @@
   <!-- HERO -->
   <section class="hero">
     <div class="hero-corner"></div>
-    <p class="eyebrow">RECEIVER VIEW</p>
     <h1 class="hero-title">PAYLOAD READY.</h1>
     <p class="hero-sub">
       Verify the metadata below and initiate download. Authenticated against the node registry.
@@ -514,22 +513,22 @@
       </div>
 
       <div class="meta-grid">
-        <div class="meta-card">
+        <!-- <div class="meta-card">
           <div class="meta-label">BUNDLE_ID</div>
           <div class="meta-value highlight"><%= files[0].uuid.slice(0, 8) %>...</div>
-        </div>
+        </div> -->
         <div class="meta-card">
           <div class="meta-label">TOTAL_SIZE</div>
           <div class="meta-value highlight"><%= totalMb %> MB</div>
         </div>
-        <div class="meta-card">
+        <!-- <div class="meta-card">
           <div class="meta-label">PAYLOAD_COUNT</div>
           <div class="meta-value highlight"><%= files.length %></div>
-        </div>
-        <div class="meta-card">
+        </div> -->
+        <!-- <div class="meta-card">
           <div class="meta-label">STATUS</div>
           <div class="meta-value highlight">AVAILABLE</div>
-        </div>
+        </div> -->
       </div>
 
       <!-- MANIFEST TABLE -->
@@ -597,10 +596,10 @@
         <% }) %>
       </div>
 
-      <div class="uuid-strip">
+      <!-- <div class="uuid-strip">
         <span class="uuid-label">XFER_UUID</span>
         <span class="uuid-val"><%= files[0].uuid %></span>
-      </div>
+      </div> -->
 
       <div class="cta-row">
         <% if (files.length > 1) { %>
