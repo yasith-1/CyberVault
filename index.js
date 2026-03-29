@@ -45,10 +45,12 @@ app.use(async (req, res, next) => {
 // Basic route for initial health check
 app.get("/health", (req, res) => {
   const dbName = connected ? mongoose.connection.name : "N/A";
+  const dbHost = connected ? (mongoose.connection.host || "unknown") : "N/A";
   res.json({ 
     status: "ok", 
     database: connected ? "connected" : "disconnected",
-    dbName: dbName
+    dbName: dbName,
+    dbHost: dbHost
   });
 });
 
