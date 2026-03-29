@@ -5,6 +5,7 @@ const path = require("path");
 const File = require("../models/file");
 const { v4: uuid4 } = require("uuid");
 const { isEmailConfigured, sendShareEmail } = require("../services/emailService");
+const { isSupabaseConfigured, uploadToSupabase } = require("../services/supabaseService");
 
 const isVercel = !!process.env.VERCEL;
 const uploadDir = isVercel ? '/tmp/uploads' : path.join(process.cwd(), "uploads");
@@ -149,7 +150,19 @@ router.post("/", (req, res) => {
     const bundleUuid = uuid4();
 
     try {
-      const dbPromises = req.files.map(f => {
+      const dbPromises = req.files.map(async (f) => {
+        let storageSource = "local";
+        
+        if (isSupabaseConfigured()) {
+          try {
+            await uploadToSupabase(f.path, f.filename);
+            storageSource = "supabase";
+          } catch (storageErr) {
+            console.error("Supabase upload failed, falling back to local:", storageErr.message);
+            // Fallback to local if Supabase fails (though on Vercel this will be temporary)
+          }
+        }
+
         const file = new File({
           originalName: f.originalname,
           filename: f.filename,
@@ -158,6 +171,7 @@ router.post("/", (req, res) => {
           size: f.size,
           sender,
           receiver,
+          storageSource,
         });
         return file.save();
       });
