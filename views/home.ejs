@@ -332,6 +332,93 @@
       letter-spacing: 0.08em;
     }
 
+    /* ── PREVIEW ── */
+    .preview-container {
+      display: none;
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      background: rgba(14,165,233,0.02);
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .preview-header {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .preview-header::before { content: '//'; }
+
+    .pv-label-block { display: flex; align-items: center; gap: 8px; }
+
+    .preview-close {
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: color 0.2s ease;
+      font-size: 14px;
+      padding: 2px 6px;
+    }
+
+    .preview-close:hover {
+      color: var(--red);
+    }
+
+
+    .preview-content {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    #previewDisplay {
+      width: 120px;
+      height: 120px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+
+    #previewDisplay img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.9;
+    }
+
+    #previewDisplay .no-preview {
+      font-size: 24px;
+      color: var(--border-hot);
+    }
+
+    .preview-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preview-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preview-meta span { color: var(--blue); }
+
+
     /* ── FIELDS ── */
     .field-row {
       display: grid;
@@ -725,7 +812,7 @@
       <div class="header-meta">
         <div class="meta-row">SYS_TIME: <span id="sysTime">--:--:--</span></div>
         <!-- <div class="meta-row">SESSION: <span id="sessionId">INIT...</span></div> -->
-        <div class="status-pill"><div class="dot"></div>NODE ONLINE</div>
+        <div class="status-pill"><div class="dot"></div>CYBERVAULT ONLINE</div>
       </div>
     </div>
   </header>
@@ -763,6 +850,26 @@
               <div class="dz-sub">drag &amp; drop or click to select<br>every transfer generates a unique UUID</div>
               <div class="file-chip" id="fileChip"></div>
             </div>
+
+            <!-- PREVIEW AREA -->
+            <div id="previewContainer" class="preview-container">
+              <div class="preview-header">
+                <div class="pv-label-block">PAYLOAD PREVIEW</div>
+                <div class="preview-close" id="previewClose" title="Clear selection">✕</div>
+              </div>
+              <div class="preview-content">
+
+                <div id="previewDisplay">
+                  <div class="no-preview">⬡</div>
+                </div>
+                <div class="preview-info">
+                  <div class="preview-meta">NAME: <span id="pvName">...</span></div>
+                  <div class="preview-meta">SIZE: <span id="pvSize">0.00 MB</span></div>
+                  <div class="preview-meta">TYPE: <span id="pvType">...</span></div>
+                </div>
+              </div>
+            </div>
+
 
             <!-- FIELDS -->
             <div class="field-row">
@@ -838,8 +945,9 @@
               <label class="field-label">LINK OR UUID</label>
               <input type="text" id="receiveInput" placeholder="https://... or raw uuid" />
             </div>
-            <div class="btn-row" style="margin-bottom:0;">
+            <div class="btn-row" style="margin-bottom:0; display: grid; grid-template-columns: 1fr auto; gap: 10px;">
               <button class="btn btn-primary" type="submit" style="width:100%; text-align:center; justify-content:center;">▶ OPEN PAYLOAD</button>
+              <button class="btn btn-ghost" type="button" id="clearReceive" title="Clear input">✕</button>
             </div>
             <div style="font-size:0.68rem; color:var(--text-dim); line-height:1.7; letter-spacing:0.06em; margin-top:8px;">
               // paste a full URL or bare UUID — path segment is extracted automatically
@@ -971,6 +1079,15 @@
   const receiveForm   = document.getElementById('receiveForm');
   const receiveInput  = document.getElementById('receiveInput');
 
+  // Preview elements
+  const previewContainer = document.getElementById('previewContainer');
+  const previewDisplay   = document.getElementById('previewDisplay');
+  const pvName           = document.getElementById('pvName');
+  const pvSize           = document.getElementById('pvSize');
+  const pvType           = document.getElementById('pvType');
+  const previewClose     = document.getElementById('previewClose');
+  const clearReceive      = document.getElementById('clearReceive');
+
   function setStatus(tone, message) {
     statusBox.dataset.tone = tone;
     statusBox.textContent = `[${tone.toUpperCase()}] ${message}`;
@@ -982,10 +1099,34 @@
   }
 
   function setSelectedFile(file) {
-    if (!file) { fileChip.style.display = 'none'; fileChip.textContent = ''; return; }
+    if (!file) { 
+      fileChip.style.display = 'none'; 
+      fileChip.textContent = ''; 
+      previewContainer.style.display = 'none';
+      return; 
+    }
+
     const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
     fileChip.style.display = 'inline-flex';
     fileChip.textContent = `${file.name}  //  ${sizeMb} MB`;
+    
+    // Process Preview
+    pvName.textContent = file.name;
+    pvSize.textContent = `${sizeMb} MB`;
+    pvType.textContent = (file.type || 'RAW_BINARY').toUpperCase();
+    
+    previewContainer.style.display = 'block';
+    
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        previewDisplay.innerHTML = `<img src="${e.target.result}" alt="preview" />`;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      previewDisplay.innerHTML = `<div class="no-preview">⬡</div>`;
+    }
+
     log(`file selected: ${file.name} (${sizeMb} MB)`, 'ok');
   }
 
@@ -1010,7 +1151,14 @@
     openLink.href              = payload.file;
   }
 
+  previewClose.addEventListener('click', () => {
+    fileInput.value = '';
+    setSelectedFile(null);
+    log('payload selection discarded', 'warn');
+  });
+
   fileInput.addEventListener('change', e => setSelectedFile(e.target.files[0]));
+
 
   ['dragenter', 'dragover'].forEach(ev => {
     dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragging'); });
@@ -1107,7 +1255,14 @@
     window.location.href = `/files/${uuid}`;
   });
 
+  clearReceive.addEventListener('click', () => {
+    receiveInput.value = '';
+    receiveInput.focus();
+    log('receive buffer cleared', 'warn');
+  });
+
   // Makes API endpoint boxes behave like interactive payload zones
+
   document.querySelectorAll('.endpoint').forEach(ep => {
     ep.title = "Click to copy endpoint path";
     ep.addEventListener('click', async () => {
