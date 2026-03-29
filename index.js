@@ -19,29 +19,37 @@ app.get("/", (req, res) => {
   });
 });
 
+// Database connection middleware (connect once and reuse)
+let connected = false;
+app.use(async (req, res, next) => {
+  if (!connected) {
+    try {
+      console.log("Lazy-connecting to database...");
+      await connectDB();
+      connected = true;
+      console.log("Database connected successfully");
+    } catch (err) {
+      console.error("Database connection failed:", err.message);
+      // We still call next() to let the app try to serve what it can,
+      // or the individual route handles the missing DB error later.
+    }
+  }
+  next();
+});
+
 // Basic route for initial health check
-app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/health", (req, res) => res.json({ status: "ok", database: connected ? "connected" : "disconnected" }));
 
 // Routes
 app.use("/api/files", files);
 app.use("/files", show);
 
-// Database connection
-console.log("Attempting database connection...");
-connectDB()
-  .then(() => console.log("Database connected successfully"))
-  .catch((err) => {
-    console.error("CRITICAL: Database connection failed during startup!");
-    console.error("Error Detail:", err.message);
-    // On Vercel, we can't kill the process gracefully, but we should log it clearly.
-  });
+// Export for Vercel
+module.exports = app;
 
-// Vercel compatibility
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+// Local development only
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server listening at :${PORT}`);
   });
 }
-
-// Export the app for Vercel
-module.exports = app;
