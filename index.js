@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const path = require("path");
 const connectDB = require("./config/db");
 const files = require("./routes/file.js");
