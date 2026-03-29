@@ -871,6 +871,10 @@
             <!-- FIELDS -->
             <div class="field-row">
               <div class="field">
+                <label class="field-label">SENDER_ADDR</label>
+                <input type="email" name="sender" placeholder="your@example.com" required />
+              </div>
+              <div class="field">
                 <label class="field-label">RECEIVER_ADDR</label>
                 <input type="email" name="receiver" placeholder="receiver@example.com" required />
               </div>
@@ -1025,7 +1029,22 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // System Metadata
+  const sys_config = {
+    appBaseUrl: "<%= appBaseUrl %>",
+    supabase: {
+      isConfigured: <%= supabase.isConfigured %>,
+      url: "<%= supabase.url %>",
+      key: "<%= supabase.key %>",
+      bucket: "<%= supabase.bucket %>"
+    }
+  };
+
+  const supabaseClient = sys_config.supabase.isConfigured 
+    ? supabase.createClient(sys_config.supabase.url, sys_config.supabase.key)
+    : null;
   // ── CLOCK & SESSION
   // const sessionId = Math.random().toString(36).slice(2, 10).toUpperCase();
   // document.getElementById('sessionId').textContent = sessionId;
@@ -1204,27 +1223,61 @@
 
 
     try {
-      const formData = new FormData(uploadForm);
-      const response = await fetch('/api/files', { method: 'POST', body: formData });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || data.message || 'Upload failed.');
-      showResult(data);
-      if (data.emailSent) {
-        setStatus('success', 'Upload complete. Share link generated and email sent.');
-        log(`email dispatched to ${data.receiver}`, 'ok');
-      } else if (data.receiver && data.emailReason === 'email_not_configured') {
-        setStatus('info', 'Link ready, but SMTP is not configured. Share manually.');
-        log('smtp not configured; email skipped', 'warn');
-      } else if (data.receiver && data.emailReason === 'smtp_sender_invalid') {
-        setStatus('danger', 'Upload succeeded, but Brevo rejected the sender address. Set SMTP_FROM to a verified sender.');
-        log(`smtp sender invalid: ${data.emailError || 'sender rejected'}`, 'err');
-      } else if (data.receiver && data.emailReason === 'smtp_auth_failed') {
-        setStatus('danger', 'Upload succeeded, but Brevo rejected the SMTP login. Share manually until credentials are fixed.');
-        log(`smtp auth failed: ${data.emailError || 'authentication failed'}`, 'err');
+      if (sys_config.supabase.isConfigured) {
+        log('cloud bypass protocol initiated', 'info');
+        const cloudFiles = [];
+        
+        for (const file of fileInput.files) {
+          const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.name}`;
+          log(`streaming to cloud: ${file.name} ...`, 'info');
+          
+          const { data, error } = await supabaseClient.storage
+            .from(sys_config.supabase.bucket)
+            .upload(uniqueName, file);
+
+          if (error) throw new Error(`Cloud transmission failed: ${error.message}`);
+          
+          cloudFiles.push({
+            originalName: file.name,
+            filename: uniqueName,
+            size: file.size,
+            path: data.path
+          });
+        }
+
+        log('handshaking with registry...', 'info');
+        const response = await fetch('/api/files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: cloudFiles,
+            sender: document.querySelector('input[name="sender"]')?.value || '',
+            receiver: document.querySelector('input[name="receiver"]')?.value || ''
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || data.message || 'Registry update failed.');
+        showResult(data);
+        handlePostUploadStatus(data);
       } else {
-        setStatus('success', 'Upload complete. Share link generated.');
+        // Legacy Redirect Logic (Warning for large files)
+        const totalSize = Array.from(fileInput.files).reduce((acc, f) => acc + f.size, 0);
+        if (totalSize > 4 * 1024 * 1024) {
+          log('WARN: payload exceeds 4MB limit for server node. cloud backup recommended.', 'warn');
+          setStatus('danger', 'Payload entity exceeds 4.5MB limit of standard server. Configure Supabase for large file transmissions.');
+          submitButton.disabled = false;
+          submitButton.textContent = '▶ EXECUTE TRANSFER';
+          return;
+        }
+
+        const formData = new FormData(uploadForm);
+        const response = await fetch('/api/files', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || data.message || 'Upload failed.');
+        showResult(data);
+        handlePostUploadStatus(data);
       }
-      log(`upload ok — uuid: ${data.uuid}`, 'ok');
     } catch (err) {
       setStatus('danger', err.message || 'Transmission error.');
       log(`error: ${err.message}`, 'err');
@@ -1233,6 +1286,25 @@
       submitButton.textContent = '▶ EXECUTE TRANSFER';
     }
   });
+
+  function handlePostUploadStatus(data) {
+    if (data.emailSent) {
+      setStatus('success', 'Upload complete. Share link generated and email sent.');
+      log(`email dispatched to ${data.receiver}`, 'ok');
+    } else if (data.receiver && data.emailReason === 'email_not_configured') {
+      setStatus('info', 'Link ready, but SMTP is not configured. Share manually.');
+      log('smtp not configured; email skipped', 'warn');
+    } else if (data.receiver && data.emailReason === 'smtp_sender_invalid') {
+      setStatus('danger', 'Upload succeeded, but Brevo rejected the sender address. Set SMTP_FROM to a verified sender.');
+      log(`smtp sender invalid: ${data.emailError || 'sender rejected'}`, 'err');
+    } else if (data.receiver && data.emailReason === 'smtp_auth_failed') {
+      setStatus('danger', 'Upload succeeded, but Brevo rejected the SMTP login. Share manually until credentials are fixed.');
+      log(`smtp auth failed: ${data.emailError || 'authentication failed'}`, 'err');
+    } else {
+      setStatus('success', 'Upload complete. Share link generated.');
+    }
+    log(`upload ok — uuid: ${data.uuid}`, 'ok');
+  }
 
   copyButton.addEventListener('click', async () => {
     const val = shareLinkText.textContent.trim();

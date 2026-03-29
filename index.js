@@ -16,11 +16,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
+  const { isSupabaseConfigured } = require("./services/supabaseService");
   const configUrl = process.env.APP_BASE_URL;
   const requestUrl = `${req.protocol}://${req.get("host")}`;
   
   res.render("home", {
     appBaseUrl: (configUrl && !configUrl.includes("localhost")) ? configUrl : requestUrl,
+    supabase: {
+      isConfigured: isSupabaseConfigured(),
+      url: process.env.SUPABASE_URL,
+      key: process.env.SUPABASE_KEY,
+      bucket: process.env.SUPABASE_BUCKET || 'cybervault-uploads'
+    }
   });
 });
 

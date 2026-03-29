@@ -131,6 +131,38 @@ router.get("/:uuid/meta", async (req, res) => {
 });
 
 router.post("/", (req, res) => {
+  // 1. Handle JSON metadata (Client-Side Cloud Upload Bypass)
+  if (req.is('json')) {
+    const { files: cloudFiles, sender: s, receiver: r } = req.body;
+    
+    if (!cloudFiles || !Array.isArray(cloudFiles) || cloudFiles.length === 0) {
+      return res.status(400).json({ error: "Cloud metadata required" });
+    }
+
+    const bundleUuid = uuid4();
+    const dbPromises = cloudFiles.map(f => {
+      const file = new File({
+        originalName: f.originalName,
+        filename: f.filename,
+        uuid: bundleUuid,
+        path: f.path || `/cloud/${f.filename}`,
+        size: f.size,
+        sender: s || null,
+        receiver: r || null,
+        storageSource: "supabase",
+      });
+      return file.save();
+    });
+
+    return Promise.all(dbPromises)
+      .then(async (savedFiles) => {
+        const emailStatus = await sendShareEmailIfPossible(savedFiles, req);
+        return res.status(201).json(formatBundlePayload(savedFiles, req, { existing: false, ...emailStatus }));
+      })
+      .catch(err => res.status(500).json({ error: err.message }));
+  }
+
+  // 2. Handle Multipart (Legacy/Small file fallback)
   upload(req, res, async (err) => {
     if (err) {
       const statusCode = err.code === "LIMIT_FILE_SIZE" ? 400 : 500;
