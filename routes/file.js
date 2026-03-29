@@ -129,38 +129,6 @@ router.post("/", (req, res) => {
     const receiver = req.body.receiver?.trim() || null;
 
     try {
-      let file = await File.findOne({
-        originalName: req.file.originalname,
-        size: req.file.size,
-      });
-
-      if (file) {
-        await fs.unlink(req.file.path).catch(() => {});
-
-        const update = {};
-
-        if (sender) {
-          update.sender = sender;
-        }
-
-        if (receiver) {
-          update.receiver = receiver;
-        }
-
-        if (Object.keys(update).length > 0) {
-          file = await File.findByIdAndUpdate(file._id, update, { new: true });
-        }
-
-        const emailStatus = await sendShareEmailIfPossible(file, req);
-
-        return res.json(
-          formatFilePayload(file, req, {
-            existing: true,
-            ...emailStatus,
-          })
-        );
-      }
-
       file = new File({
         originalName: req.file.originalname,
         filename: req.file.filename,

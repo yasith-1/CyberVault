@@ -2,12 +2,36 @@ const router = require("express").Router();
 const path = require("path");
 const File = require("../models/file");
 
+router.get("/download/:uuid", async (req, res) => {
+  try {
+    const file = await File.findOne({ uuid: req.params.uuid });
+    if (!file) {
+      return res.status(404).json({
+        message: "File record not found",
+      });
+    }
+
+    // Reconstruct the path relative to the current project directory.
+    // This is more robust than using an absolute path stored in the database,
+    // which might point to a path from a previous environment (e.g., Vercel's /tmp).
+    const isVercel = !!process.env.VERCEL;
+    const uploadDir = isVercel ? "/tmp/uploads" : path.join(__dirname, "..", "uploads");
+    const filePath = path.join(uploadDir, file.filename);
+
+    return res.download(filePath, file.originalName || file.filename);
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
 router.get("/:uuid", async (req, res) => {
   try {
     const file = await File.findOne({ uuid: req.params.uuid });
     if (!file) {
       return res.status(404).render("download", {
-        error: "File not found",
+        error: "File record not found in registry",
         file: null,
         downloadLink: null,
         shareLink: null,
@@ -30,21 +54,5 @@ router.get("/:uuid", async (req, res) => {
   }
 });
 
-router.get("/download/:uuid", async (req, res) => {
-  try {
-    const file = await File.findOne({ uuid: req.params.uuid });
-    if (!file) {
-      return res.status(404).json({
-        message: "File not found",
-      });
-    }
-
-    return res.download(path.resolve(file.path), file.filename);
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message,
-    });
-  }
-});
 
 module.exports = router;

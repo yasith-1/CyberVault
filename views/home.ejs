@@ -760,7 +760,7 @@
               <input id="fileInput" type="file" name="myfile" required />
               <span class="dz-icon">⬡</span>
               <div class="dz-title">DROP PAYLOAD HERE</div>
-              <div class="dz-sub">drag &amp; drop or click to select<br>duplicate uploads reuse existing UUID</div>
+              <div class="dz-sub">drag &amp; drop or click to select<br>every transfer generates a unique UUID</div>
               <div class="file-chip" id="fileChip"></div>
             </div>
 
@@ -888,7 +888,7 @@
               <div><div class="step-num">01</div></div>
               <div>
                 <div class="step-title">UPLOAD / CACHE HIT</div>
-                <div class="step-desc">Payload is sent to the upload API. Duplicates return the existing UUID without re-transmit.</div>
+                <div class="step-desc">Payload is sent to the upload API. Every transmission generates a fresh link and UUID.</div>
               </div>
             </div>
             <div class="step">
@@ -991,14 +991,11 @@
 
   function showResult(payload) {
     resultCard.classList.add('active');
-    const alreadyExists = Boolean(payload.existing);
-    resultBadge.textContent    = alreadyExists ? 'CACHE_HIT' : 'NEW_UPLOAD';
-    resultBadge.className      = `result-badge ${alreadyExists ? 'existing' : 'new'}`;
-    resultHeading.textContent  = alreadyExists ? 'CACHE HIT — UUID REUSED' : 'TRANSFER COMPLETE';
+    resultBadge.textContent    = 'NEW_UPLOAD';
+    resultBadge.className      = `result-badge new`;
+    resultHeading.textContent  = 'TRANSFER COMPLETE';
     if (payload.emailSent) {
-      resultText.textContent = alreadyExists
-        ? 'Existing UUID reused and receiver email dispatched.'
-        : 'Upload successful and receiver email dispatched.';
+      resultText.textContent = 'Upload successful and receiver email dispatched.';
     } else if (payload.receiver && payload.emailReason === 'email_not_configured') {
       resultText.textContent = 'File ready, but SMTP is not configured yet. Share the link manually.';
     } else if (payload.receiver && payload.emailReason === 'smtp_sender_invalid') {
@@ -1006,9 +1003,7 @@
     } else if (payload.receiver && payload.emailReason === 'smtp_auth_failed') {
       resultText.textContent = 'File uploaded, but Brevo rejected the SMTP login. Fix SMTP credentials, then share the link manually for now.';
     } else {
-      resultText.textContent = alreadyExists
-        ? 'File already existed on server. Previous UUID has been reused.'
-        : 'Upload successful. Share the link manually if email delivery is unavailable.';
+      resultText.textContent = 'Upload successful. Share the link manually if email delivery is unavailable.';
     }
     shareLinkText.textContent  = payload.file;
     shareUuidText.textContent  = `UUID :: ${payload.uuid}`;
@@ -1060,7 +1055,7 @@
       if (!response.ok) throw new Error(data.error || data.message || 'Upload failed.');
       showResult(data);
       if (data.emailSent) {
-        setStatus('success', data.existing ? 'Cache hit. UUID reused and email sent.' : 'Upload complete. Share link generated and email sent.');
+        setStatus('success', 'Upload complete. Share link generated and email sent.');
         log(`email dispatched to ${data.receiver}`, 'ok');
       } else if (data.receiver && data.emailReason === 'email_not_configured') {
         setStatus('info', 'Link ready, but SMTP is not configured. Share manually.');
@@ -1072,9 +1067,9 @@
         setStatus('danger', 'Upload succeeded, but Brevo rejected the SMTP login. Share manually until credentials are fixed.');
         log(`smtp auth failed: ${data.emailError || 'authentication failed'}`, 'err');
       } else {
-        setStatus('success', data.existing ? 'Cache hit. UUID reused.' : 'Upload complete. Share link generated.');
+        setStatus('success', 'Upload complete. Share link generated.');
       }
-      log(data.existing ? `cache hit — uuid: ${data.uuid}` : `upload ok — uuid: ${data.uuid}`, 'ok');
+      log(`upload ok — uuid: ${data.uuid}`, 'ok');
     } catch (err) {
       setStatus('danger', err.message || 'Transmission error.');
       log(`error: ${err.message}`, 'err');

@@ -64,11 +64,28 @@ async function sendShareEmail({ sender, receiver, shareLink, fileName, fileSize 
   ].join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2933;">
-      <h2 style="margin-bottom: 12px;">File shared with you</h2>
-      <p><strong>${sender || "Someone"}</strong> shared a file with you.</p>
-      <p><strong>File:</strong> ${fileName}<br /><strong>Size:</strong> ${sizeMb} MB</p>
-      <p><a href="${shareLink}" style="color: #be5b35;">Open download page</a></p>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #f1f5f9; background-color: #020b07; padding: 40px 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #040f09; border: 1px solid #0ea5e9; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: rgba(14, 165, 233, 0.1); padding: 20px; border-bottom: 1px solid #0ea5e9;">
+          <h1 style="margin: 0; color: #0ea5e9; font-size: 24px; letter-spacing: 2px;">CYBERVAULT</h1>
+          <p style="margin: 5px 0 0; color: #38bdf8; font-size: 12px; text-transform: uppercase;">// NODE_XFER_PROTOCOL_V2</p>
+        </div>
+        <div style="padding: 30px;">
+          <h2 style="margin: 0 0 15px; color: #ffffff; font-size: 18px;">File shared with you</h2>
+          <p style="margin: 0 0 20px; color: #bae6fd;"><strong>${sender || "Someone"}</strong> has initiated a secure payload transfer to your address.</p>
+          
+          <div style="background-color: rgba(0,0,0,0.3); border: 1px dashed rgba(14,165,233,0.3); padding: 15px; margin-bottom: 30px; font-family: 'Courier New', Courier, monospace;">
+            <div style="margin-bottom: 8px;"><span style="color: #38bdf8;">FILE:</span> <span style="color: #ffffff;">${fileName}</span></div>
+            <div><span style="color: #38bdf8;">SIZE:</span> <span style="color: #ffffff;">${sizeMb} MB</span></div>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="${shareLink}" style="display: inline-block; background-color: #0ea5e9; color: #020b07; padding: 14px 28px; text-decoration: none; font-weight: bold; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">Open download page</a>
+          </div>
+          
+          <p style="margin: 30px 0 0; font-size: 12px; color: #38bdf8; opacity: 0.7;">// authenticated against node registry v2.1.0</p>
+        </div>
+      </div>
     </div>
   `;
 
