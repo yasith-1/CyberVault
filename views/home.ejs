@@ -372,44 +372,15 @@
     }
 
 
-    .preview-content {
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 16px;
-      align-items: center;
-    }
-
-    #previewDisplay {
-      width: 120px;
-      height: 120px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      border-radius: 4px;
-    }
-
-    #previewDisplay img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.9;
-    }
-
-    #previewDisplay .no-preview {
-      font-size: 24px;
-      color: var(--border-hot);
-    }
-
     .preview-info {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-width: 0;
     }
 
     .preview-meta {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -417,6 +388,39 @@
     }
 
     .preview-meta span { color: var(--blue); }
+
+    .preview-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .preview-item {
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px;
+      background: rgba(14,165,233,0.04);
+      border: 1px solid rgba(14,165,233,0.1);
+      border-radius: 4px;
+    }
+
+    .pv-thumb {
+      width: 80px; height: 80px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: grid; place-items: center;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .pv-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .pv-thumb .ico { font-size: 20px; color: var(--blue-muted); }
+
 
 
     /* ── FIELDS ── */
@@ -844,31 +848,24 @@
           <form id="uploadForm">
             <!-- DROPZONE -->
             <div class="dropzone" id="dropzone">
-              <input id="fileInput" type="file" name="myfile" required />
+              <input id="fileInput" type="file" name="myfiles" multiple required />
               <span class="dz-icon">⬡</span>
-              <div class="dz-title">DROP PAYLOAD HERE</div>
-              <div class="dz-sub">drag &amp; drop or click to select<br>every transfer generates a unique UUID</div>
+              <div class="dz-title">DROP PAYLOAD BUNDLE HERE</div>
+              <div class="dz-sub">drag &amp; drop or click to select multiple files<br>every session generates a unique XFER_UUID</div>
               <div class="file-chip" id="fileChip"></div>
             </div>
 
             <!-- PREVIEW AREA -->
             <div id="previewContainer" class="preview-container">
               <div class="preview-header">
-                <div class="pv-label-block">PAYLOAD PREVIEW</div>
+                <div class="pv-label-block">BATCH PAYLOAD PREVIEW</div>
                 <div class="preview-close" id="previewClose" title="Clear selection">✕</div>
               </div>
-              <div class="preview-content">
-
-                <div id="previewDisplay">
-                  <div class="no-preview">⬡</div>
-                </div>
-                <div class="preview-info">
-                  <div class="preview-meta">NAME: <span id="pvName">...</span></div>
-                  <div class="preview-meta">SIZE: <span id="pvSize">0.00 MB</span></div>
-                  <div class="preview-meta">TYPE: <span id="pvType">...</span></div>
-                </div>
+              <div id="previewList" class="preview-list">
+                <!-- Preview items will be injected here -->
               </div>
             </div>
+
 
 
             <!-- FIELDS -->
@@ -1081,12 +1078,10 @@
 
   // Preview elements
   const previewContainer = document.getElementById('previewContainer');
-  const previewDisplay   = document.getElementById('previewDisplay');
-  const pvName           = document.getElementById('pvName');
-  const pvSize           = document.getElementById('pvSize');
-  const pvType           = document.getElementById('pvType');
+  const previewList      = document.getElementById('previewList');
   const previewClose     = document.getElementById('previewClose');
   const clearReceive      = document.getElementById('clearReceive');
+
 
   function setStatus(tone, message) {
     statusBox.dataset.tone = tone;
@@ -1098,37 +1093,48 @@
     statusBox.textContent = '';
   }
 
-  function setSelectedFile(file) {
-    if (!file) { 
+  function setSelectedFiles(files) {
+    if (!files || files.length === 0) { 
       fileChip.style.display = 'none'; 
       fileChip.textContent = ''; 
       previewContainer.style.display = 'none';
       return; 
     }
 
-    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+    previewList.innerHTML = '';
+    let totalSize = 0;
+
+    Array.from(files).forEach((file, index) => {
+      totalSize += file.size;
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      
+      let thumbContent = `<div class="ico">⬡</div>`;
+      if (file.type.startsWith('image/')) {
+        thumbContent = `<img src="${URL.createObjectURL(file)}" alt="preview" onload="URL.revokeObjectURL(this.src)" />`;
+      }
+
+      item.innerHTML = `
+        <div class="pv-thumb">${thumbContent}</div>
+        <div class="preview-info">
+          <div class="preview-meta">NAME: <span style="color:var(--text);">${file.name}</span></div>
+          <div class="preview-meta">SIZE: <span>${sizeMb} MB</span> | TYPE: <span>${file.type || 'RAW_BINARY'}</span></div>
+        </div>
+        <div style="font-size:10px; color:var(--text-dim); opacity:0.5;">[${String(index+1).padStart(2,'0')}]</div>
+      `;
+      previewList.appendChild(item);
+    });
+
+    const totalMb = (totalSize / (1024 * 1024)).toFixed(2);
     fileChip.style.display = 'inline-flex';
-    fileChip.textContent = `${file.name}  //  ${sizeMb} MB`;
-    
-    // Process Preview
-    pvName.textContent = file.name;
-    pvSize.textContent = `${sizeMb} MB`;
-    pvType.textContent = (file.type || 'RAW_BINARY').toUpperCase();
+    fileChip.textContent = `${files.length} PAYLOAD(S)  //  ${totalMb} MB TOTAL`;
     
     previewContainer.style.display = 'block';
-    
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        previewDisplay.innerHTML = `<img src="${e.target.result}" alt="preview" />`;
-      };
-      reader.readAsDataURL(file);
-    } else {
-      previewDisplay.innerHTML = `<div class="no-preview">⬡</div>`;
-    }
-
-    log(`file selected: ${file.name} (${sizeMb} MB)`, 'ok');
+    log(`batch selection updated: ${files.length} payloads ready (${totalMb} MB)`, 'ok');
   }
+
 
   function showResult(payload) {
     resultCard.classList.add('active');
@@ -1153,11 +1159,12 @@
 
   previewClose.addEventListener('click', () => {
     fileInput.value = '';
-    setSelectedFile(null);
-    log('payload selection discarded', 'warn');
+    setSelectedFiles(null);
+    log('payload batch selection discarded', 'warn');
   });
 
-  fileInput.addEventListener('change', e => setSelectedFile(e.target.files[0]));
+  fileInput.addEventListener('change', e => setSelectedFiles(e.target.files));
+
 
 
   ['dragenter', 'dragover'].forEach(ev => {
@@ -1169,32 +1176,32 @@
   });
 
   dropzone.addEventListener('drop', e => {
-    const f = e.dataTransfer.files[0];
-    if (!f) return;
-    const dt = new DataTransfer();
-    dt.items.add(f);
-    fileInput.files = dt.files;
-    setSelectedFile(f);
+    const f = e.dataTransfer.files;
+    if (!f || f.length === 0) return;
+    fileInput.files = f;
+    setSelectedFiles(f);
   });
 
   uploadForm.addEventListener('reset', () => {
     clearStatus();
     resultCard.classList.remove('active');
-    setTimeout(() => setSelectedFile(null), 0);
+    setTimeout(() => setSelectedFiles(null), 0);
     log('form cleared', 'warn');
   });
 
+
   uploadForm.addEventListener('submit', async e => {
     e.preventDefault();
-    if (!fileInput.files[0]) {
-      setStatus('danger', 'No payload selected. Choose a file first.');
-      log('err: no file selected', 'err');
+    if (!fileInput.files.length) {
+      setStatus('danger', 'No payload batch selected. Choose files first.');
+      log('err: no files selected', 'err');
       return;
     }
     clearStatus();
     submitButton.disabled = true;
     submitButton.textContent = '... TRANSMITTING';
-    log(`initiating upload: ${fileInput.files[0].name}`);
+    log(`initiating batch upload: ${fileInput.files.length} files`);
+
 
     try {
       const formData = new FormData(uploadForm);

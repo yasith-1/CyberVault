@@ -28,29 +28,32 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: fileSizeLimitBytes },
-}).single("myfile");
+}).array("myfiles", 10);
 
 function getBaseUrl(req) {
   return process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
 }
 
-function formatFilePayload(file, req, extras = {}) {
-  const shareLink = `${getBaseUrl(req)}/files/${file.uuid}`;
+function formatBundlePayload(files, req, extras = {}) {
+  const bundleUuid = files[0].uuid;
+  const shareLink = `${getBaseUrl(req)}/files/${bundleUuid}`;
+  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
 
   return {
-    uuid: file.uuid,
+    uuid: bundleUuid,
     file: shareLink,
-    originalName: file.originalName,
-    filename: file.filename,
-    size: file.size,
-    sender: file.sender || null,
-    receiver: file.receiver || null,
+    count: files.length,
+    filenames: files.map(f => f.originalName || f.filename),
+    size: totalSize,
+    sender: files[0].sender || null,
+    receiver: files[0].receiver || null,
     ...extras,
   };
 }
 
-async function sendShareEmailIfPossible(file, req) {
-  if (!file.receiver) {
+async function sendShareEmailIfPossible(files, req) {
+  const first = files[0];
+  if (!first.receiver) {
     return { emailSent: false, emailReason: "receiver_missing" };
   }
 
@@ -58,13 +61,18 @@ async function sendShareEmailIfPossible(file, req) {
     return { emailSent: false, emailReason: "email_not_configured" };
   }
 
+  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+  const bundleDescriptor = files.length > 1 
+    ? `${files.length} files (including ${files[0].originalName || files[0].filename})`
+    : files[0].originalName || files[0].filename;
+
   try {
     await sendShareEmail({
-      sender: file.sender,
-      receiver: file.receiver,
-      shareLink: `${getBaseUrl(req)}/files/${file.uuid}`,
-      fileName: file.originalName || file.filename,
-      fileSize: file.size,
+      sender: first.sender,
+      receiver: first.receiver,
+      shareLink: `${getBaseUrl(req)}/files/${first.uuid}`,
+      fileName: bundleDescriptor,
+      fileSize: totalSize,
     });
 
     return { emailSent: true };
@@ -94,15 +102,15 @@ router.get("/health", (req, res) => {
 
 router.get("/:uuid/meta", async (req, res) => {
   try {
-    const file = await File.findOne({ uuid: req.params.uuid });
+    const files = await File.find({ uuid: req.params.uuid });
 
-    if (!file) {
+    if (!files || !files.length) {
       return res.status(404).json({
-        message: "File not found",
+        message: "Payload bundle not found",
       });
     }
 
-    return res.json(formatFilePayload(file, req));
+    return res.json(formatBundlePayload(files, req));
   } catch (error) {
     return res.status(500).json({
       error: error.message,
@@ -119,37 +127,44 @@ router.post("/", (req, res) => {
       });
     }
 
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({
-        message: "file couldn't be found",
+        message: "At least one file is required for transmission.",
       });
     }
 
     const sender = req.body.sender?.trim() || null;
     const receiver = req.body.receiver?.trim() || null;
+    const bundleUuid = uuid4();
 
     try {
-      file = new File({
-        originalName: req.file.originalname,
-        filename: req.file.filename,
-        uuid: uuid4(),
-        path: req.file.path,
-        size: req.file.size,
-        sender,
-        receiver,
+      const dbPromises = req.files.map(f => {
+        const file = new File({
+          originalName: f.originalname,
+          filename: f.filename,
+          uuid: bundleUuid,
+          path: f.path,
+          size: f.size,
+          sender,
+          receiver,
+        });
+        return file.save();
       });
 
-      const savedFile = await file.save();
-      const emailStatus = await sendShareEmailIfPossible(savedFile, req);
+      const savedFiles = await Promise.all(dbPromises);
+      const emailStatus = await sendShareEmailIfPossible(savedFiles, req);
 
       return res.status(201).json(
-        formatFilePayload(savedFile, req, {
+        formatBundlePayload(savedFiles, req, {
           existing: false,
           ...emailStatus,
         })
       );
     } catch (error) {
-      await fs.unlink(req.file.path).catch(() => {});
+      // Cleanup files if DB save fails
+      for (const f of req.files) {
+        await fs.unlink(f.path).catch(() => {});
+      }
 
       return res.status(500).json({
         error: error.message,
@@ -157,5 +172,6 @@ router.post("/", (req, res) => {
     }
   });
 });
+
 
 module.exports = router;

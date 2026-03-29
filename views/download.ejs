@@ -192,13 +192,16 @@
     .eyebrow::before { content: '//'; color: var(--text-dim); }
 
     .hero-title {
-      font-size: clamp(1.8rem, 5vw, 3.4rem);
+      font-size: clamp(1.4rem, 6vw, 3.2rem);
       font-weight: 800;
-      line-height: 0.95;
+      line-height: 1.1;
       color: var(--blue);
       text-shadow: 0 0 40px rgba(14,165,233,0.3);
       letter-spacing: 0.04em;
       margin-bottom: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .hero-sub {
@@ -206,8 +209,9 @@
       color: var(--text-muted);
       line-height: 1.75;
       letter-spacing: 0.04em;
-      max-width: 520px;
+      max-width: 580px;
     }
+
 
     /* ── CONTENT ── */
     .content {
@@ -481,10 +485,11 @@
   <section class="hero">
     <div class="hero-corner"></div>
     <p class="eyebrow">RECEIVER VIEW</p>
-    <h1 class="hero-title">PAYLOAD<br>READY.</h1>
+    <h1 class="hero-title">PAYLOAD READY.</h1>
     <p class="hero-sub">
-      Verify the file metadata below and initiate download. Link has been authenticated against the UUID registry.
+      Verify the metadata below and initiate download. Authenticated against the node registry.
     </p>
+
   </section>
 
   <!-- CONTENT -->
@@ -497,25 +502,29 @@
       </div>
     <% } %>
 
-    <% if (file) { %>
+    <% if (files && files.length > 0) { %>
+      <% 
+        const totalSize = files.reduce((acc, f) => acc + f.size, 0); 
+        const totalMb = (totalSize / (1024 * 1024)).toFixed(2);
+      %>
 
       <div class="alert success">
         <span class="alert-icon">✓</span>
-        <span>[OK] Link verified. UUID authenticated. Payload cleared for download.</span>
+        <span>[OK] Bundle verified. <%= files.length %> payload(S) CLEARED FOR DOWNLOAD.</span>
       </div>
 
       <div class="meta-grid">
         <div class="meta-card">
-          <div class="meta-label">STORED_FILENAME</div>
-          <div class="meta-value"><%= file.filename %></div>
+          <div class="meta-label">BUNDLE_ID</div>
+          <div class="meta-value highlight"><%= files[0].uuid.slice(0, 8) %>...</div>
         </div>
         <div class="meta-card">
-          <div class="meta-label">ORIGINAL_NAME</div>
-          <div class="meta-value"><%= file.originalName || file.filename %></div>
+          <div class="meta-label">TOTAL_SIZE</div>
+          <div class="meta-value highlight"><%= totalMb %> MB</div>
         </div>
         <div class="meta-card">
-          <div class="meta-label">FILE_SIZE</div>
-          <div class="meta-value highlight"><%= (file.size / (1024 * 1024)).toFixed(2) %> MB</div>
+          <div class="meta-label">PAYLOAD_COUNT</div>
+          <div class="meta-value highlight"><%= files.length %></div>
         </div>
         <div class="meta-card">
           <div class="meta-label">STATUS</div>
@@ -523,19 +532,83 @@
         </div>
       </div>
 
+      <!-- MANIFEST TABLE -->
+      <style>
+        .manifest-container {
+          border: 1px solid var(--border);
+          background: rgba(0,0,0,0.3);
+          border-radius: 6px;
+          overflow: hidden;
+          margin-top: 10px;
+        }
+        .manifest-header {
+          padding: 12px 18px;
+          background: rgba(14,165,233,0.06);
+          border-bottom: 1px solid var(--border);
+          font-size: 0.68rem;
+          letter-spacing: 0.2em;
+          color: var(--text-dim);
+          text-transform: uppercase;
+        }
+        .manifest-row {
+          display: grid;
+          grid-template-columns: 1fr 100px 120px;
+          gap: 15px;
+          padding: 14px 18px;
+          border-bottom: 1px solid rgba(14,165,233,0.08);
+          align-items: center;
+          transition: background 0.2s ease;
+        }
+        .manifest-row:last-child { border-bottom: none; }
+        .manifest-row:hover { background: rgba(14,165,233,0.03); }
+        
+        .manifest-name { 
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.85rem;
+          color: var(--text);
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .manifest-size { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+        
+        .btn-mini {
+          padding: 6px 12px;
+          font-size: 0.65rem;
+          justify-content: center;
+        }
+
+        @media (max-width: 500px) {
+          .manifest-row { grid-template-columns: 1fr auto; }
+          .manifest-size { display: none; }
+        }
+      </style>
+
+      <div class="manifest-container">
+        <div class="manifest-header">Payload Manifest</div>
+        <% files.forEach((file, index) => { %>
+          <div class="manifest-row">
+            <div class="manifest-name"><%= file.originalName || file.filename %></div>
+            <div class="manifest-size"><%= (file.size / (1024 * 1024)).toFixed(2) %> MB</div>
+            <div style="text-align: right;">
+              <a href="/files/download/single/<%= file._id %>" class="btn btn-primary btn-mini">▼ DOWNLOAD</a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
       <div class="uuid-strip">
-        <span class="uuid-label">UUID</span>
-        <span class="uuid-val"><%= file.uuid %></span>
+        <span class="uuid-label">XFER_UUID</span>
+        <span class="uuid-val"><%= files[0].uuid %></span>
       </div>
 
       <div class="cta-row">
-        <a class="btn btn-primary" href="<%= downloadLink %>">▼ DOWNLOAD PAYLOAD</a>
-        <a class="btn btn-ghost" href="/">← BACK TO NODE</a>
+        <% if (files.length > 1) { %>
+          <a class="btn btn-primary" href="/files/download/all/<%= files[0].uuid %>">▼ DOWNLOAD ALL (.ZIP)</a>
+        <% } %>
+        <a class="btn btn-ghost" href="/">← BACK TO HOME NODE</a>
       </div>
 
-      <p class="hint">
-        If the download does not initiate, retry the button or forward the UUID back to the sender node for re-verification.
-      </p>
 
     <% } else { %>
 
@@ -543,7 +616,7 @@
         <div class="empty-icon">⬡</div>
         <div class="empty-title">PAYLOAD NOT FOUND</div>
         <p class="empty-sub">
-          This share link is unavailable, expired, or no longer mapped to a stored file in the registry.
+          This share link is unavailable, expired, or the entire bundle has been purged from the registry.
         </p>
         <a class="btn btn-ghost" href="/">← RETURN TO HOME NODE</a>
       </div>
@@ -552,9 +625,9 @@
 
   </section>
 
+
   <!-- FOOTER -->
   <div class="page-footer">
-    <div>// backend governs file storage, delivery &amp; auth. receiver view is read-only.</div>
     <span>CYBERVAULT // XFER_PROTOCOL v2.1.0</span>
   </div>
 
