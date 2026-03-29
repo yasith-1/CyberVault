@@ -31,7 +31,16 @@ const upload = multer({
 }).array("myfiles", 10);
 
 function getBaseUrl(req) {
-  return process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
+  const configUrl = process.env.APP_BASE_URL;
+  const requestUrl = `${req.protocol}://${req.get("host")}`;
+
+  // If APP_BASE_URL is set and is NOT localhost, use it as the source of truth.
+  // If it's missing or set to localhost, use the actual host from the request.
+  if (configUrl && !configUrl.includes("localhost")) {
+    return configUrl;
+  }
+
+  return requestUrl;
 }
 
 function formatBundlePayload(files, req, extras = {}) {
