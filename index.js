@@ -35,8 +35,10 @@ app.use(async (req, res, next) => {
       console.log("Database connected successfully");
     } catch (err) {
       console.error("Database connection failed:", err.message);
-      // We still call next() to let the app try to serve what it can,
-      // or the individual route handles the missing DB error later.
+      return res.status(500).json({ 
+        error: "Database configuration error. Please check MONGO_URL.",
+        details: err.message 
+      });
     }
   }
   next();

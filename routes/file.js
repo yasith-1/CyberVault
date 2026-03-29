@@ -11,9 +11,11 @@ const uploadDir = isVercel ? '/tmp/uploads' : path.join(process.cwd(), "uploads"
 const fileSizeLimitBytes = 1000 * 1000 * 100;
 
 const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
+  destination: (req, file, cb) => {
     try {
-      await fs.mkdir(uploadDir, { recursive: true });
+      if (!require('fs').existsSync(uploadDir)) {
+        require('fs').mkdirSync(uploadDir, { recursive: true });
+      }
       cb(null, uploadDir);
     } catch (error) {
       cb(error);
